@@ -11,7 +11,7 @@ robot=IRA_UR_SocketCtrl_Prog.SocketCtrl('192.168.1.111',30002,30020,100,1000)
 print(robot.Start())
 time.sleep(1)
 #LOAD THE MODEL
-model=torch.hub.load('C:/Users/sarojd.ADVA_MUNICH/Eva/vis_package/adaptive/', 'custom', path='C:/Users/sarojd.ADVA_MUNICH/Eva/vis_package/adaptive/adaptive.pt', source='local')
+model=torch.hub.load('C:/Users/Public/Eva/HAL/Eva_HAL/vis_package/', 'custom', path='C:/Users/Public/Eva/HAL/Eva_HAL/vis_package/adaptive.pt', source='local')
 #Indexing function
 def get_desired_order(points, threshold=10):
     sorted_points = sorted(points, key=lambda p: p[0], reverse=True)
@@ -37,9 +37,9 @@ def get_desired_order(points, threshold=10):
 
 #PID SETTING
 
-pidz=PID(0.2, 0.0, 0.0001, setpoint=0.5096)
-pidx = PID(0.0002, 0.0, 0.0001, setpoint=-38)
-pidy=PID(-0.0002, 0.0, 0.0001, setpoint=-5)
+pidz=PID(0.5, 0.0, 0.0001, setpoint=0.670)
+pidx = PID(0.0002, 0.0, 0.0001, setpoint=-40)
+pidy=PID(-0.0002, 0.0, 0.0001, setpoint=-3)
 pidx.sample_time = 0.01
 pidy.sample_time = 0.01
 
@@ -85,6 +85,8 @@ while True:
         except IndexError:
             if len(desired_order_bolt)>1:
                 boltindex-=1
+            elif len(desired_order_bolt)==0:
+                break
             else:
                 boltindex=0
     if len(bboxes)>0:
@@ -93,12 +95,12 @@ while True:
         for i, bbox in enumerate(bboxes):
             x1, y1, x2, y2 = bbox[:4].astype(int)
             confidence = round(float(bbox[4]), 2)
-            if confidence>=0.3 and labels[int(bbox[5])]=='nut' and (x1,y1)==(current_point_nut[0],current_point_nut[1]):
+            if confidence>=0 and labels[int(bbox[5])]=='nut' and (x1,y1)==(current_point_nut[0],current_point_nut[1]):
                 label = f"{labels[int(bbox[5])]}: {confidence}:[{x1/2+x2/2},{y1/2+y2/2}]"
                 nutxy=(x1,y1)
                 cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
                 cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-            elif confidence>=0.3 and labels[int(bbox[5])]=='bolt' and (x1,y1)==(current_point_bolt[0],current_point_bolt[1]):
+            elif confidence>=0 and labels[int(bbox[5])]=='bolt' and (x1,y1)==(current_point_bolt[0],current_point_bolt[1]):
                 label = f"{labels[int(bbox[5])]}: {confidence}:[{x1/2+x2/2},{y1/2+y2/2}]"
                 boltxy=(x1,y1)
                 cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
@@ -107,15 +109,12 @@ while True:
         print('Difference between x1: ',nutxy[0]-boltxy[0])
         print('Difference between y1: ',nutxy[1]-boltxy[1])
         print('Robot X position: ',list(robot.ActualPoseCartesianRad)[0])
-        vel_x=pidz(list(robot.ActualPoseCartesianRad)[0])
+        #vel_x=pidz(list(robot.ActualPoseCartesianRad)[0])
         vel_y=pidy(nutxy[1]-boltxy[1])
         vel_z=pidx(nutxy[0]-boltxy[0])
-        robot.SpeedL([vel_x,vel_y,vel_z,0,0,0],False,True,0.3,0.5,0.0)
-        if (-5.5<=(nutxy[1]-boltxy[1])<=-4.5) and (-38.5<=(nutxy[0]-boltxy[0])<=-37.5) and (0.5094<=list(robot.ActualPoseCartesianRad)[0]<=0.5098):
-            #vel_x=pidz(list(robot.ActualPoseCartesianRad)[0])
-            #vel_y=pidy(nutxy[1]-boltxy[1])
-            #vel_z=pidx(nutxy[0]-boltxy[0])
-            #robot.SpeedL([vel_x,vel_y,vel_z,0,0,0],False,True,0.3,0.5,0.0)
+        robot.SpeedL([0,vel_y,vel_z,0,0,0],False,True,0.3,0.5,0.0)
+        if ((nutxy[1]-boltxy[1])==-3) and ((nutxy[0]-boltxy[0])==-40):
+            
             robot.StopL(20.0)
             camera_pose=list(robot.ActualPoseCartesianRad)
             print(camera_pose)
@@ -126,8 +125,8 @@ while True:
 cv2.destroyAllWindows()
 cap.release()
 #time.sleep(5)
-camera_pose[0]+=0.1
-robot.MoveL(camera_pose,True,True,True,0.3,0.5,0.0)
-camera_pose[0]-=0.2
-robot.MoveL(camera_pose,True,True,True,0.3,0.5,0.0)
+camera_pose[0]+=0.05
+robot.MoveL(camera_pose,True,True,True,0.2,0.2,0.0)
+#camera_pose[0]-=0.05
+#robot.MoveL(camera_pose,True,True,True,0.3,0.5,0.0)
 robot.Stop()
